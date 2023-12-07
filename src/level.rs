@@ -64,7 +64,7 @@ pub fn create_class_text(
     area: &Area,
     commands: &mut Commands,
 ) {
-    let signs = [
+    const SIGNS: [BlockState; 4] = [
         BlockState::OAK_SIGN,
         BlockState::OAK_WALL_SIGN,
         BlockState::OAK_HANGING_SIGN,
@@ -74,7 +74,7 @@ pub fn create_class_text(
         let Some(block) = layer.chunk.block(pos) else {
             continue;
         };
-        if !signs.contains(&block.state) {
+        if !SIGNS.contains(&block.state) {
             continue;
         }
         let Some(nbt) = block.nbt else {
@@ -222,7 +222,7 @@ pub struct ChunksLoading {
 impl Default for ChunksLoading {
     fn default() -> Self {
         Self {
-            timer: 5 * DEFAULT_TPS.get() as i64,
+            timer: DEFAULT_TPS.get() as i64 / 5,
         }
     }
 }

@@ -3,9 +3,9 @@ use classes::{ArcherClass, MageClass, RogueClass, WarriorClass};
 use level::{ArenaLayer, LobbyLayer, LobbyPlayer};
 use valence::{prelude::*, spawn::IsFlat};
 
-pub mod area;
-pub mod classes;
-pub mod level;
+mod area;
+mod classes;
+mod level;
 
 pub fn main() {
     App::new()
@@ -15,7 +15,13 @@ pub fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
-        .add_systems(PreUpdate, level::update_changed_chunk_layer_timer)
+        .add_systems(
+            PreUpdate,
+            (
+                level::update_changed_chunk_layer_timer,
+                classes::update_cooldown,
+            ),
+        )
         .add_systems(
             Update,
             (
@@ -24,10 +30,20 @@ pub fn main() {
                 level::do_class_triggers::<ArcherClass>,
                 level::do_class_triggers::<MageClass>,
                 level::do_class_triggers::<RogueClass>,
-                classes::init_warrior,
                 level::move_to_arena,
                 level::keep_position_while_chunks_loading,
                 level::update_inventory_while_chunks_loading,
+                classes::init_warrior,
+                classes::init_archer,
+                classes::init_mage,
+                classes::init_rogue,
+                classes::warrior_dig,
+                classes::archer_shoot,
+                (
+                    (classes::arrow_intersection, classes::arrow_oob),
+                    classes::arrow_movement,
+                )
+                    .chain(),
             ),
         )
         .run();
