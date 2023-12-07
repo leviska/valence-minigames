@@ -209,32 +209,32 @@ pub fn move_to_arena(
         pos.set([0.0, 61.0, 0.0]);
         commands
             .entity(e)
-            .insert((ChangedChunkLayer::default(), KeepPosition(pos.0)));
+            .insert((ChunksLoading::default(), KeepPosition(pos.0)));
         client.send_chat_message("You've picked ".into_text() + class_name.0.bold() + " class!");
     }
 }
 
 #[derive(Component)]
-pub struct ChangedChunkLayer {
+pub struct ChunksLoading {
     pub timer: i64,
 }
 
-impl Default for ChangedChunkLayer {
+impl Default for ChunksLoading {
     fn default() -> Self {
         Self {
-            timer: 1 * DEFAULT_TPS.get() as i64,
+            timer: 5 * DEFAULT_TPS.get() as i64,
         }
     }
 }
 
 pub fn update_changed_chunk_layer_timer(
-    mut timers: Query<(Entity, &mut ChangedChunkLayer)>,
+    mut timers: Query<(Entity, &mut ChunksLoading)>,
     mut commands: Commands,
 ) {
     for (e, mut timer) in timers.iter_mut() {
         timer.timer -= 1;
         if timer.timer <= 0 {
-            commands.entity(e).remove::<ChangedChunkLayer>();
+            commands.entity(e).remove::<ChunksLoading>();
         }
     }
 }
@@ -243,7 +243,7 @@ pub fn update_changed_chunk_layer_timer(
 pub struct KeepPosition(pub DVec3);
 
 pub fn keep_position_while_chunks_loading(
-    mut clients: Query<(&KeepPosition, &mut Position), With<ChangedChunkLayer>>,
+    mut clients: Query<(&KeepPosition, &mut Position), With<ChunksLoading>>,
 ) {
     for (target, mut pos) in &mut clients {
         pos.set(target.0);
@@ -251,7 +251,7 @@ pub fn keep_position_while_chunks_loading(
 }
 
 pub fn update_inventory_while_chunks_loading(
-    mut clients: Query<&mut Inventory, With<ChangedChunkLayer>>,
+    mut clients: Query<&mut Inventory, With<ChunksLoading>>,
 ) {
     for mut inv in &mut clients {
         inv.changed = u64::MAX;
