@@ -44,6 +44,12 @@ pub fn main() {
                     classes::arrow_movement,
                 )
                     .chain(),
+                classes::mage_shoot,
+                (
+                    (classes::fireball_intersection, classes::fireball_oob),
+                    classes::fireball_movement,
+                )
+                    .chain(),
             ),
         )
         .run();
