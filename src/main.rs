@@ -15,6 +15,7 @@ pub fn main() {
         })
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
+        .add_systems(PreUpdate, level::update_changed_chunk_layer_timer)
         .add_systems(
             Update,
             (
@@ -23,8 +24,10 @@ pub fn main() {
                 level::do_class_triggers::<ArcherClass>,
                 level::do_class_triggers::<MageClass>,
                 level::do_class_triggers::<RogueClass>,
+                classes::init_warrior,
                 level::move_to_arena,
-                level::teleporting,
+                level::keep_position_while_chunks_loading,
+                level::update_inventory_while_chunks_loading,
             ),
         )
         .run();
@@ -85,7 +88,7 @@ fn init_clients(
         is_flat.0 = true;
 
         pos.set([0.0, 61.0, 0.0]);
-        *game_mode = GameMode::Adventure;
+        *game_mode = GameMode::Survival;
 
         commands.entity(entity).insert(LobbyPlayer);
 

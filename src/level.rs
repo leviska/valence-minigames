@@ -9,6 +9,7 @@ use valence::{
     nbt::value::ValueRef,
     prelude::*,
     text::TextContent,
+    DEFAULT_TPS,
 };
 
 pub fn load_level(
@@ -181,6 +182,7 @@ pub fn move_to_arena(
             &mut EntityLayerId,
             &mut VisibleChunkLayer,
             &mut VisibleEntityLayers,
+            &mut Position,
             &ClassName,
         ),
         Added<ArenaPlayer>,
@@ -195,6 +197,7 @@ pub fn move_to_arena(
         mut entity_layer,
         mut visible_chunk_layer,
         mut visible_entity_layers,
+        mut pos,
         class_name,
     ) in clients.iter_mut()
     {
@@ -202,22 +205,55 @@ pub fn move_to_arena(
         visible_chunk_layer.0 = arena;
         visible_entity_layers.0.clear();
         visible_entity_layers.0.insert(arena);
+
+        pos.set([0.0, 61.0, 0.0]);
         commands
             .entity(e)
-            .insert(Teleporting([0.0, 61.0, 0.0].into()));
+            .insert((ChangedChunkLayer::default(), KeepPosition(pos.0)));
         client.send_chat_message("You've picked ".into_text() + class_name.0.bold() + " class!");
     }
 }
 
 #[derive(Component)]
-pub struct Teleporting(pub DVec3);
+pub struct ChangedChunkLayer {
+    pub timer: i64,
+}
 
-pub fn teleporting(
-    mut clients: Query<(Entity, &Teleporting, &mut Position), With<Client>>,
+impl Default for ChangedChunkLayer {
+    fn default() -> Self {
+        Self {
+            timer: 1 * DEFAULT_TPS.get() as i64,
+        }
+    }
+}
+
+pub fn update_changed_chunk_layer_timer(
+    mut timers: Query<(Entity, &mut ChangedChunkLayer)>,
     mut commands: Commands,
 ) {
-    for (e, tp, mut pos) in &mut clients {
-        pos.set(tp.0);
-        commands.entity(e).remove::<Teleporting>();
+    for (e, mut timer) in timers.iter_mut() {
+        timer.timer -= 1;
+        if timer.timer <= 0 {
+            commands.entity(e).remove::<ChangedChunkLayer>();
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct KeepPosition(pub DVec3);
+
+pub fn keep_position_while_chunks_loading(
+    mut clients: Query<(&KeepPosition, &mut Position), With<ChangedChunkLayer>>,
+) {
+    for (target, mut pos) in &mut clients {
+        pos.set(target.0);
+    }
+}
+
+pub fn update_inventory_while_chunks_loading(
+    mut clients: Query<&mut Inventory, With<ChangedChunkLayer>>,
+) {
+    for mut inv in &mut clients {
+        inv.changed = u64::MAX;
     }
 }
