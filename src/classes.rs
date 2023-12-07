@@ -56,11 +56,8 @@ fn clear_inventory(inv: &mut Inventory) {
     }
 }
 
-pub fn init_warrior(
-    mut clients: Query<(Entity, &mut Inventory), (With<Client>, Added<WarriorClass>)>,
-    mut commands: Commands,
-) {
-    for (e, mut inv) in clients.iter_mut() {
+pub fn init_warrior(mut clients: Query<&mut Inventory, (With<Client>, Added<WarriorClass>)>) {
+    for mut inv in clients.iter_mut() {
         let inv = inv.as_mut();
         clear_inventory(inv);
         inv.set_slot(

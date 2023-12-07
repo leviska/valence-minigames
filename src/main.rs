@@ -3,7 +3,7 @@ use classes::{ArcherClass, MageClass, RogueClass, WarriorClass};
 use level::{ArenaLayer, LobbyLayer, LobbyPlayer};
 use valence::{prelude::*, spawn::IsFlat};
 
-mod area;
+pub mod area;
 mod classes;
 mod level;
 
