@@ -110,7 +110,7 @@ fn init_clients(
         is_flat.0 = true;
 
         pos.set([0.0, 61.0, 0.0]);
-        *game_mode = GameMode::Survival;
+        *game_mode = GameMode::Adventure;
 
         commands.entity(entity).insert(LobbyPlayer);
 

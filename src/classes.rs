@@ -61,10 +61,15 @@ fn clear_inventory(inv: &mut Inventory) {
     }
 }
 
-pub fn init_warrior(mut clients: Query<&mut Inventory, (With<Client>, Added<WarriorClass>)>) {
-    for mut inv in clients.iter_mut() {
+pub fn init_warrior(
+    mut clients: Query<(&mut Inventory, &mut GameMode), (With<Client>, Added<WarriorClass>)>,
+) {
+    for (mut inv, mut game_mode) in clients.iter_mut() {
+        *game_mode = GameMode::Survival;
+
         let inv = inv.as_mut();
         clear_inventory(inv);
+
         inv.set_slot(
             HOTBAR_START,
             ItemStack::new(ItemKind::WoodenShovel, 1, None),
@@ -360,7 +365,7 @@ pub fn mage_shoot(
             },
             MageFireball,
         ));
-        commands.entity(client).insert(Cooldown(25));
+        commands.entity(client).insert(Cooldown(15));
     };
     for event in item_interacts.read() {
         process(event.client);
