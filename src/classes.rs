@@ -2,14 +2,18 @@ use crate::{area::Area, level::ArenaLayer};
 use std::collections::HashSet;
 use valence::{
     entity::{
-        arrow::ArrowEntityBundle, egg::EggEntityBundle, entity::NoGravity, thrown_item::Item,
-        Velocity,
+        arrow::ArrowEntityBundle, attributes::EntityAttributes, egg::EggEntityBundle,
+        entity::NoGravity, thrown_item::Item, EntityAttribute, EntityId, Velocity,
     },
     interact_block::InteractBlockEvent,
     interact_item::InteractItemEvent,
     inventory::{player_slots::HOTBAR_START, HeldItem},
     math::IVec3,
     prelude::*,
+    protocol::{
+        packets::play::{entity_status_effect_s2c::Flags, EntityStatusEffectS2c},
+        WritePacket,
+    },
 };
 
 #[derive(Component)]
@@ -96,8 +100,11 @@ pub fn init_mage(mut clients: Query<&mut Inventory, (With<Client>, Added<MageCla
     }
 }
 
-pub fn init_rogue(mut clients: Query<&mut Inventory, (With<Client>, Added<RogueClass>)>) {
-    for mut inv in clients.iter_mut() {
+pub fn init_rogue(
+    mut clients: Query<(&mut Inventory, &mut EntityAttributes), (With<Client>, Added<RogueClass>)>,
+) {
+    for (mut inv, mut attr) in clients.iter_mut() {
+        attr.set_base_value(EntityAttribute::GenericMovementSpeed, 0.2);
         let inv = inv.as_mut();
         clear_inventory(inv);
         inv.set_slot(HOTBAR_START, ItemStack::new(ItemKind::WoodenSword, 1, None));
@@ -353,6 +360,7 @@ pub fn mage_shoot(
         }
         let shift: DVec3 = [0.0, 1.5, 0.0].into();
         let arrow_origin = pos.0 + shift + look.vec().as_dvec3();
+        // Egg is nice, because it doesn't jitter too much on the client and has old version support
         commands.spawn((
             EggEntityBundle {
                 thrown_item_item: Item(ItemStack::new(ItemKind::FireCharge, 1, None)),

@@ -234,7 +234,7 @@ pub fn update_changed_chunk_layer_timer(
     for (e, mut timer) in timers.iter_mut() {
         timer.timer -= 1;
         if timer.timer <= 0 {
-            commands.entity(e).remove::<ChunksLoading>();
+            commands.entity(e).remove::<(ChunksLoading, KeepPosition)>();
         }
     }
 }
