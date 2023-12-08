@@ -1,19 +1,21 @@
 use crate::{area::Area, level::ArenaLayer};
+use bevy_ecs::query::WorldQuery;
 use std::collections::HashSet;
 use valence::{
     entity::{
-        arrow::ArrowEntityBundle, attributes::EntityAttributes, egg::EggEntityBundle,
-        entity::NoGravity, thrown_item::Item, EntityAttribute, EntityId, Velocity,
+        arrow::ArrowEntityBundle,
+        attributes::EntityAttributes,
+        egg::EggEntityBundle,
+        entity::{Flags, NoGravity},
+        thrown_item::Item,
+        EntityAttribute, Velocity,
     },
     interact_block::InteractBlockEvent,
     interact_item::InteractItemEvent,
     inventory::{player_slots::HOTBAR_START, HeldItem},
-    math::IVec3,
+    math::{IVec3, Vec3Swizzles},
     prelude::*,
-    protocol::{
-        packets::play::{entity_status_effect_s2c::Flags, EntityStatusEffectS2c},
-        WritePacket,
-    },
+    DEFAULT_TPS,
 };
 
 #[derive(Component)]
@@ -380,5 +382,71 @@ pub fn mage_shoot(
     }
     for event in block_interacts.read() {
         process(event.client);
+    }
+}
+
+#[derive(Default, Component)]
+pub struct CombatState {
+    pub last_attacked_tick: i64,
+}
+
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct CombatQuery {
+    client: &'static mut Client,
+    state: &'static mut CombatState,
+    flags: &'static Flags,
+    pos: &'static Position,
+    vel: &'static mut Velocity,
+}
+
+pub fn combat(
+    server: Res<Server>,
+    mut clients: Query<CombatQuery>,
+    rogues: Query<(&HeldItem, &Inventory), With<RogueClass>>,
+    mut interact_entity: EventReader<InteractEntityEvent>,
+) {
+    for event in interact_entity.read() {
+        let Ok([mut attacker, mut victim]) = clients.get_many_mut([event.client, event.entity])
+        else {
+            continue;
+        };
+        let current_tick = server.current_tick();
+        if current_tick - victim.state.last_attacked_tick < DEFAULT_TPS.get() as i64 / 2 {
+            continue;
+        }
+        victim.state.last_attacked_tick = current_tick;
+
+        let victim_pos = victim.pos.0.xz();
+        let attacker_pos = attacker.pos.0.xz();
+
+        let dir = (victim_pos - attacker_pos).normalize().as_vec2();
+
+        let bonus_knockback = if let Ok((slot, inv)) = rogues.get(event.client) {
+            if inv.slot(slot.slot()).item == ItemKind::WoodenSword {
+                1.2
+            } else {
+                1.0
+            }
+        } else {
+            1.0
+        };
+        let knockback_xz = if attacker.flags.sprinting() {
+            18.0
+        } else {
+            8.0
+        } * bonus_knockback;
+        let knockback_y = if attacker.flags.sprinting() {
+            8.432
+        } else {
+            6.432
+        };
+
+        let new_vel: Vec3 = [dir.x * knockback_xz, knockback_y, dir.y * knockback_xz].into();
+        victim.client.set_velocity(new_vel);
+        victim.vel.0 = new_vel;
+
+        // victim.client.trigger_status(EntityStatus::PlayAttackSound);
+        // victim.statuses.trigger(EntityStatus::PlayAttackSound);
     }
 }

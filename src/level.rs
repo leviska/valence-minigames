@@ -1,6 +1,8 @@
 use crate::{
     area::Area,
-    classes::{ArcherClass, ClassName, GameClass, MageClass, RogueClass, WarriorClass},
+    classes::{
+        ArcherClass, ClassName, CombatState, GameClass, MageClass, RogueClass, WarriorClass,
+    },
 };
 use std::{collections::HashMap, marker::PhantomData, path::PathBuf, str::FromStr};
 use valence::{
@@ -169,6 +171,7 @@ pub fn do_class_triggers<Class: Component + GameClass>(
                 ArenaPlayer,
                 Class::default(),
                 ClassName(Class::name()),
+                CombatState::default(),
             ));
         }
     }

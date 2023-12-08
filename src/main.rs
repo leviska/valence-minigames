@@ -39,6 +39,7 @@ pub fn main() {
                 classes::init_rogue,
                 classes::warrior_dig,
                 classes::archer_shoot,
+                classes::combat,
                 (
                     (classes::arrow_intersection, classes::arrow_oob),
                     classes::arrow_movement,
@@ -112,7 +113,7 @@ fn init_clients(
         pos.set([0.0, 61.0, 0.0]);
         *game_mode = GameMode::Adventure;
 
-        commands.entity(entity).insert(LobbyPlayer);
+        commands.entity(entity).insert((LobbyPlayer,));
 
         client.send_chat_message("Welcome to ".into_text() + "Spleef: RPG".italic());
     }
