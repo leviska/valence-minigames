@@ -6,13 +6,34 @@ use crate::{
 };
 use std::{collections::HashMap, marker::PhantomData, path::PathBuf, str::FromStr};
 use valence::{
+    advancement::bevy_hierarchy::{BuildChildren, Parent},
     anvil::parsing::{DimensionFolder, ParseChunkError},
-    entity::text_display::TextDisplayEntityBundle,
+    entity::{text_display::TextDisplayEntityBundle, OnGround},
     nbt::value::ValueRef,
     prelude::*,
+    protocol::{packets::play::BlockBreakingProgressS2c, WritePacket},
     text::TextContent,
     DEFAULT_TPS,
 };
+
+pub const WOOL: [BlockState; 16] = [
+    BlockState::WHITE_WOOL,
+    BlockState::ORANGE_WOOL,
+    BlockState::MAGENTA_WOOL,
+    BlockState::LIGHT_BLUE_WOOL,
+    BlockState::YELLOW_WOOL,
+    BlockState::LIME_WOOL,
+    BlockState::PINK_WOOL,
+    BlockState::GRAY_WOOL,
+    BlockState::LIGHT_GRAY_WOOL,
+    BlockState::CYAN_WOOL,
+    BlockState::PURPLE_WOOL,
+    BlockState::BLUE_WOOL,
+    BlockState::BROWN_WOOL,
+    BlockState::GREEN_WOOL,
+    BlockState::RED_WOOL,
+    BlockState::BLACK_WOOL,
+];
 
 pub fn load_level(
     path: impl Into<PathBuf>,
@@ -159,6 +180,36 @@ pub fn create_class_trigger(layer: &mut LayerBundle, area: &Area, commands: &mut
     });
 }
 
+#[derive(Component, Default)]
+pub struct DynamicBlocks {
+    pub data: HashMap<BlockPos, Entity>,
+}
+
+pub fn create_arena_blocks(
+    layer_id: Entity,
+    layer: &mut LayerBundle,
+    area: &Area,
+    commands: &mut Commands,
+) {
+    let blocks = area.iter_block_pos();
+    let mut dynamic = DynamicBlocks::default();
+    for pos in blocks {
+        let Some(block) = layer.chunk.block(pos) else {
+            continue;
+        };
+        if !WOOL.contains(&block.state) {
+            continue;
+        }
+
+        let block = commands
+            .spawn((BreakingState::default(), BlockPosition { pos }))
+            .id();
+        dynamic.data.insert(pos, block);
+        commands.entity(layer_id).add_child(block);
+    }
+    commands.entity(layer_id).insert(dynamic);
+}
+
 pub fn do_class_triggers<Class: Component + GameClass>(
     mut clients: Query<(Entity, &Position), (With<Client>, With<LobbyPlayer>)>,
     trigger: Query<&ClassTrigger<Class>>,
@@ -258,5 +309,90 @@ pub fn update_inventory_while_chunks_loading(
 ) {
     for mut inv in &mut clients {
         inv.changed = u64::MAX;
+    }
+}
+
+#[derive(Component)]
+pub struct BreakingState {
+    pub hp: i32,
+}
+
+impl BreakingState {
+    const MAX_HP: i32 = DEFAULT_TPS.get() as i32 * 5;
+
+    pub fn destroy_stage(&self) -> u8 {
+        let stage = (Self::MAX_HP - self.hp.clamp(0, Self::MAX_HP)) * 11 / Self::MAX_HP;
+        if stage == 0 {
+            10
+        } else {
+            stage as u8 - 1
+        }
+    }
+}
+
+impl Default for BreakingState {
+    fn default() -> Self {
+        Self { hp: Self::MAX_HP }
+    }
+}
+
+#[derive(Component)]
+pub struct BlockPosition {
+    pub pos: BlockPos,
+}
+
+pub fn break_blocks_under_player(
+    clients: Query<(&Position, &OnGround), With<ArenaPlayer>>,
+    arena: Query<&DynamicBlocks, With<ArenaLayer>>,
+    mut blocks: Query<&mut BreakingState>,
+) {
+    let arena = arena.single();
+    for (pos, ground) in clients.iter() {
+        if !ground.0 {
+            continue;
+        }
+        let mut pos = pos.0;
+        pos.y -= 1.0;
+        let block_pos: BlockPos = pos.into();
+        let Some(e) = arena.data.get(&block_pos) else {
+            continue;
+        };
+        let Ok(mut state) = blocks.get_mut(*e) else {
+            continue;
+        };
+        state.hp -= 1;
+    }
+}
+
+pub fn destroy_broken_blocks(
+    mut layers: Query<(&mut ChunkLayer, &mut DynamicBlocks)>,
+    states: Query<(Entity, &Parent, &BlockPosition, &BreakingState), Changed<BreakingState>>,
+    mut commands: Commands,
+) {
+    for (e, parent, block, state) in states.iter() {
+        if state.hp > 0 {
+            continue;
+        }
+        if let Ok((mut layer, mut dynamic)) = layers.get_mut(parent.get()) {
+            layer.set_block(block.pos, BlockState::AIR);
+            dynamic.data.remove(&block.pos);
+        }
+        commands.entity(e).despawn();
+    }
+}
+
+pub fn send_breaking_state(
+    mut layers: Query<&mut ChunkLayer>,
+    states: Query<(Entity, &Parent, &BlockPosition, &BreakingState), Changed<BreakingState>>,
+) {
+    for (e, parent, block, state) in states.iter() {
+        let Ok(mut layer) = layers.get_mut(parent.get()) else {
+            continue;
+        };
+        layer.write_packet(&BlockBreakingProgressS2c {
+            entity_id: (e.index() as i32).into(),
+            position: block.pos,
+            destroy_stage: state.destroy_stage(),
+        });
     }
 }

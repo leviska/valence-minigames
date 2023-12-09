@@ -1,4 +1,7 @@
-use crate::{area::Area, level::ArenaLayer};
+use crate::{
+    area::Area,
+    level::{ArenaLayer, WOOL},
+};
 use bevy_ecs::query::WorldQuery;
 use std::collections::HashSet;
 use valence::{
@@ -124,25 +127,6 @@ pub fn update_cooldown(mut clients: Query<(Entity, &mut Cooldown)>, mut commands
         }
     }
 }
-
-const WOOL: [BlockState; 16] = [
-    BlockState::WHITE_WOOL,
-    BlockState::ORANGE_WOOL,
-    BlockState::MAGENTA_WOOL,
-    BlockState::LIGHT_BLUE_WOOL,
-    BlockState::YELLOW_WOOL,
-    BlockState::LIME_WOOL,
-    BlockState::PINK_WOOL,
-    BlockState::GRAY_WOOL,
-    BlockState::LIGHT_GRAY_WOOL,
-    BlockState::CYAN_WOOL,
-    BlockState::PURPLE_WOOL,
-    BlockState::BLUE_WOOL,
-    BlockState::BROWN_WOOL,
-    BlockState::GREEN_WOOL,
-    BlockState::RED_WOOL,
-    BlockState::BLACK_WOOL,
-];
 
 pub fn warrior_dig(
     mut clients: Query<
@@ -407,8 +391,7 @@ pub fn combat(
     mut interact_entity: EventReader<InteractEntityEvent>,
 ) {
     for event in interact_entity.read() {
-        let Ok([mut attacker, mut victim]) = clients.get_many_mut([event.client, event.entity])
-        else {
+        let Ok([attacker, mut victim]) = clients.get_many_mut([event.client, event.entity]) else {
             continue;
         };
         let current_tick = server.current_tick();

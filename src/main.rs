@@ -1,7 +1,7 @@
 use area::Area;
 use classes::{ArcherClass, MageClass, RogueClass, WarriorClass};
 use level::{ArenaLayer, LobbyLayer, LobbyPlayer};
-use valence::{prelude::*, spawn::IsFlat};
+use valence::{prelude::*, protocol::WritePacket, spawn::IsFlat};
 
 pub mod area;
 mod classes;
@@ -33,6 +33,11 @@ pub fn main() {
                 level::move_to_arena,
                 level::keep_position_while_chunks_loading,
                 level::update_inventory_while_chunks_loading,
+                (
+                    level::break_blocks_under_player,
+                    level::destroy_broken_blocks,
+                )
+                    .chain(),
                 classes::init_warrior,
                 classes::init_archer,
                 classes::init_mage,
@@ -53,6 +58,7 @@ pub fn main() {
                     .chain(),
             ),
         )
+        .add_systems(PostUpdate, (level::send_breaking_state,))
         .run();
 }
 
@@ -71,9 +77,11 @@ fn setup(
     commands.entity(lobby_id).insert(lobby);
 
     let arena_area = Area::new([-100, 50, -100], [100, 100, 100]);
-    let arena =
+    let mut arena =
         level::load_level("maps/arena", &biomes, &dimensions, &server, &arena_area).unwrap();
-    commands.spawn((arena, ArenaLayer));
+    let arena_id = commands.spawn(ArenaLayer).id();
+    level::create_arena_blocks(arena_id, &mut arena, &arena_area, &mut commands);
+    commands.entity(arena_id).insert(arena);
 }
 
 fn init_clients(
