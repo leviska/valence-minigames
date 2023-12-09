@@ -351,16 +351,24 @@ pub fn break_blocks_under_player(
         if !ground.0 {
             continue;
         }
-        let mut pos = pos.0;
-        pos.y -= 1.0;
-        let block_pos: BlockPos = pos.into();
-        let Some(e) = arena.data.get(&block_pos) else {
-            continue;
-        };
-        let Ok(mut state) = blocks.get_mut(*e) else {
-            continue;
-        };
-        state.hp -= 1;
+        let mut potential_blocks: Vec<_> = [-0.5, 0.0, 0.5]
+            .into_iter()
+            .flat_map(|x| [-0.5, 0.0, 0.5].map(|z| (x, z)))
+            .map(|(x, z)| pos.0 + DVec3::new(x, -0.5, z))
+            .collect();
+        potential_blocks.sort_by(|a, b| pos.0.distance(*a).total_cmp(&pos.0.distance(*b)));
+        potential_blocks.dedup();
+        for pos in potential_blocks {
+            let block_pos: BlockPos = pos.into();
+            let Some(e) = arena.data.get(&block_pos) else {
+                continue;
+            };
+            let Ok(mut state) = blocks.get_mut(*e) else {
+                continue;
+            };
+            state.hp -= 1;
+            break;
+        }
     }
 }
 
