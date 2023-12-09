@@ -1,7 +1,7 @@
 use area::Area;
 use classes::{ArcherClass, MageClass, RogueClass, WarriorClass};
 use level::{ArenaLayer, LobbyLayer, LobbyPlayer};
-use valence::{prelude::*, protocol::WritePacket, spawn::IsFlat};
+use valence::{prelude::*, spawn::IsFlat};
 
 pub mod area;
 mod classes;
