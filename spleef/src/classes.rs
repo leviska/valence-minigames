@@ -15,7 +15,7 @@ use valence::{
     },
     interact_block::InteractBlockEvent,
     interact_item::InteractItemEvent,
-    inventory::{player_slots::HOTBAR_START, HeldItem},
+    inventory::{player_inventory::PlayerInventory, HeldItem},
     math::{IVec3, Vec3Swizzles},
     prelude::*,
     DEFAULT_TPS,
@@ -80,7 +80,7 @@ pub fn init_warrior(
         clear_inventory(inv);
 
         inv.set_slot(
-            HOTBAR_START,
+            PlayerInventory::hotbar_to_slot(0),
             ItemStack::new(ItemKind::WoodenShovel, 1, None),
         );
     }
@@ -90,7 +90,10 @@ pub fn init_archer(mut clients: Query<&mut Inventory, (With<Client>, Added<Arche
     for mut inv in clients.iter_mut() {
         let inv = inv.as_mut();
         clear_inventory(inv);
-        inv.set_slot(HOTBAR_START, ItemStack::new(ItemKind::Bow, 1, None));
+        inv.set_slot(
+            PlayerInventory::hotbar_to_slot(0),
+            ItemStack::new(ItemKind::Bow, 1, None),
+        );
     }
 }
 
@@ -99,7 +102,7 @@ pub fn init_mage(mut clients: Query<&mut Inventory, (With<Client>, Added<MageCla
         let inv = inv.as_mut();
         clear_inventory(inv);
         inv.set_slot(
-            HOTBAR_START,
+            PlayerInventory::hotbar_to_slot(0),
             ItemStack::new(ItemKind::FireworkRocket, 1, None),
         );
     }
@@ -112,7 +115,10 @@ pub fn init_rogue(
         attr.set_base_value(EntityAttribute::GenericMovementSpeed, 0.2);
         let inv = inv.as_mut();
         clear_inventory(inv);
-        inv.set_slot(HOTBAR_START, ItemStack::new(ItemKind::WoodenSword, 1, None));
+        inv.set_slot(
+            PlayerInventory::hotbar_to_slot(0),
+            ItemStack::new(ItemKind::WoodenSword, 1, None),
+        );
     }
 }
 
