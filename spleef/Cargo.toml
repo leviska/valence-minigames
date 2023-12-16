@@ -1,0 +1,8 @@
+[package]
+name = "spleef"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy_ecs = "0.12.1"
+valence = { git = "https://github.com/valence-rs/valence" }
